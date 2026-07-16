@@ -1,345 +1,466 @@
 # SENTINEL Kubernetes Deployment Guide
+## QuickStart Architecture for Learning AKS
 
-This directory contains production-ready Kubernetes manifests for deploying the SENTINEL Energy Supply Chain Resilience Platform on Azure Kubernetes Service (AKS).
+This directory contains **simplified, production-ready** Kubernetes manifests optimized for a **single-node AKS cluster** for learning Azure DevOps and Kubernetes fundamentals.
 
-## 📁 Files Overview
+## 🎯 What You're Deploying
+
+**QuickStart Architecture** (just like docker-compose.quickstart.yml):
+```
+┌─────────────────────────────────────┐
+│     Azure Load Balancer (Public IP) │
+└────────────────┬────────────────────┘
+                 │
+        ┌────────▼──────────┐
+        │   FRONTEND POD    │
+        │  Nginx + React    │
+        │  (1 replica)      │
+        └────────┬──────────┘
+                 │
+        ┌────────▼──────────┐
+        │    BACKEND POD    │
+        │  FastAPI Python   │
+        │  (1 replica)      │
+        │                   │
+        │  • SQLite DB      │
+        │  • NetworkX Graph │
+        │  • In-memory Queue│
+        └───────────────────┘
+```
+
+**What's NOT included** (to fit your 1-node cluster):
+- ❌ PostgreSQL
+- ❌ Neo4j
+- ❌ Kafka + Zookeeper
+- ❌ HPA (HorizontalPodAutoscaler)
+- ❌ PDB (PodDisruptionBudget)
+- ❌ Ingress Controller
+- ❌ Multiple replicas
+- ❌ Anti-affinity rules
+
+## 📁 Files in This Directory
 
 | File | Purpose |
 |------|---------|
-| `namespace.yaml` | Creates the `sentinel` namespace with resource quotas and limits |
-| `configmap.yaml` | Non-sensitive configuration values |
-| `secrets.yaml.example` | Template for creating secrets (DO NOT commit actual secrets!) |
-| `postgres-deployment.yaml` | PostgreSQL StatefulSet and Service |
-| `neo4j-deployment.yaml` | Neo4j graph database StatefulSet and Service |
-| `backend-deployment.yaml` | Backend API deployment with health checks and autoscaling |
-| `backend-service.yaml` | Backend service, HPA, and PDB configurations |
-| `frontend-deployment.yaml` | Frontend Nginx deployment |
-| `frontend-service.yaml` | Frontend service, Ingress, HPA, and PDB |
+| `namespace.yaml` | Creates `sentinel` namespace |
+| `configmap.yaml` | Application configuration |
+| `secrets.yaml.example` | JWT secret template |
+| `backend-deployment.yaml` | Backend deployment (1 pod) |
+| `backend-service.yaml` | Backend ClusterIP service |
+| `frontend-deployment.yaml` | Frontend deployment (1 pod) |
+| `frontend-service.yaml` | Frontend LoadBalancer service |
 
-## 🏗️ Architecture
+## 🖥️ Your Cluster Specs
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      INGRESS (NGINX)                         │
-│  sentinel.yourdomain.com → Frontend                          │
-│  api.sentinel.yourdomain.com → Backend                       │
-└─────────────────────────────────────────────────────────────┘
-                            │
-              ┌─────────────┴──────────────┐
-              │                            │
-    ┌─────────▼────────┐        ┌─────────▼────────┐
-    │    FRONTEND      │        │     BACKEND      │
-    │   (2-6 pods)     │        │   (3-10 pods)    │
-    │  Nginx + React   │        │  FastAPI Python  │
-    └──────────────────┘        └─────────┬────────┘
-                                          │
-                        ┌─────────────────┼─────────────────┐
-                        │                 │                 │
-                ┌───────▼─────┐  ┌────────▼────────┐  ┌────▼────┐
-                │  PostgreSQL  │  │     Neo4j       │  │  Kafka  │
-                │ (StatefulSet)│  │  (StatefulSet)  │  │(Optional)│
-                └──────────────┘  └─────────────────┘  └─────────┘
+Node Count:  1
+Node Size:   Standard_D2_v3
+vCPU:        2
+RAM:         8 GB
 ```
+
+## 📊 Resource Allocation
+
+| Component | CPU Request | CPU Limit | Memory Request | Memory Limit |
+|-----------|-------------|-----------|----------------|--------------|
+| Backend   | 200m        | 1000m     | 256Mi          | 1Gi          |
+| Frontend  | 100m        | 500m      | 128Mi          | 512Mi        |
+| **TOTAL** | **300m**    | **1500m** | **384Mi**      | **1.5Gi**    |
+
+**Total cluster capacity:** 2000m CPU, ~8Gi RAM  
+**Reserved by system:** ~500m CPU, ~2Gi RAM  
+**Available for apps:** ~1500m CPU, ~6Gi RAM  
+**This deployment uses:** 300m CPU, 384Mi RAM ✅ **Fits comfortably!**
 
 ## 🚀 Deployment Steps
 
 ### Prerequisites
 
-1. **Azure CLI and kubectl installed**
+1. **AKS cluster created and running**
    ```bash
-   az --version
-   kubectl version --client
+   az aks show --resource-group your-rg --name your-aks --query provisioningState
    ```
 
-2. **AKS Cluster created**
+2. **kubectl connected to your cluster**
    ```bash
-   az aks create \
-     --resource-group sentinel-rg \
-     --name sentinel-aks \
-     --node-count 3 \
-     --node-vm-size Standard_D4s_v3 \
-     --enable-managed-identity \
-     --generate-ssh-keys
+   az aks get-credentials --resource-group your-rg --name your-aks
+   kubectl get nodes
    ```
 
-3. **Get AKS credentials**
+3. **ACR images built and pushed**
    ```bash
-   az aks get-credentials --resource-group sentinel-rg --name sentinel-aks
-   ```
-
-4. **Docker images pushed to registry**
-   ```bash
-   # Tag images
-   docker tag sentinel-backend:latest abhaysahu403/sentinel-backend:latest
-   docker tag sentinel-frontend:latest abhaysahu403/sentinel-frontend:latest
+   # Check if images exist in your ACR
+   az acr repository list --name acrsentinelabhay --output table
    
-   # Push to Docker Hub
-   docker login
-   docker push abhaysahu403/sentinel-backend:latest
-   docker push abhaysahu403/sentinel-frontend:latest
+   # Should show:
+   # sentinel-backend
+   # sentinel-frontend
    ```
 
 ### Step 1: Create Namespace
 
 ```bash
+cd k8s
 kubectl apply -f namespace.yaml
+```
+
+**Verify:**
+```bash
+kubectl get namespace sentinel
 ```
 
 ### Step 2: Create Secrets
 
-**IMPORTANT:** Never commit secrets to git!
-
 ```bash
-# Method 1: Create from command line
+# Generate a secure JWT secret
+JWT_SECRET=$(openssl rand -base64 32)
+
+# Create the secret
 kubectl create secret generic sentinel-secrets \
   --namespace=sentinel \
-  --from-literal=database-url='postgresql://sentinel:YOUR_PASSWORD@postgres.sentinel.svc.cluster.local:5432/sentinel' \
-  --from-literal=neo4j-user='neo4j' \
-  --from-literal=neo4j-password='YOUR_NEO4J_PASSWORD' \
-  --from-literal=neo4j-auth='neo4j/YOUR_NEO4J_PASSWORD' \
-  --from-literal=postgres-password='YOUR_POSTGRES_PASSWORD' \
-  --from-literal=jwt-secret='YOUR_JWT_SECRET' \
-  --from-literal=eia-api-key='' \
-  --from-literal=marinetraffic-api-key=''
+  --from-literal=jwt-secret="$JWT_SECRET"
+```
 
-# Method 2: Use Azure Key Vault (Recommended)
-# See secrets.yaml.example for detailed instructions
+**Verify:**
+```bash
+kubectl get secrets -n sentinel
+kubectl describe secret sentinel-secrets -n sentinel
 ```
 
 ### Step 3: Create ConfigMap
 
 ```bash
-# Edit configmap.yaml first to set your domain names
 kubectl apply -f configmap.yaml
 ```
 
-### Step 4: Deploy Databases
-
+**Verify:**
 ```bash
-# PostgreSQL
-kubectl apply -f postgres-deployment.yaml
-
-# Neo4j
-kubectl apply -f neo4j-deployment.yaml
-
-# Wait for databases to be ready
-kubectl wait --for=condition=ready pod -l component=postgres -n sentinel --timeout=300s
-kubectl wait --for=condition=ready pod -l component=neo4j -n sentinel --timeout=300s
+kubectl get configmap -n sentinel
+kubectl describe configmap sentinel-config -n sentinel
 ```
 
-### Step 5: Deploy Backend
+### Step 4: Deploy Backend
 
 ```bash
 kubectl apply -f backend-deployment.yaml
 kubectl apply -f backend-service.yaml
+```
 
-# Wait for backend to be ready
+**Wait for backend to be ready:**
+```bash
 kubectl wait --for=condition=ready pod -l component=backend -n sentinel --timeout=300s
 ```
 
-### Step 6: Deploy Frontend
+**Check status:**
+```bash
+kubectl get pods -n sentinel -l component=backend
+kubectl logs -f deployment/sentinel-backend -n sentinel
+```
+
+### Step 5: Deploy Frontend
 
 ```bash
 kubectl apply -f frontend-deployment.yaml
 kubectl apply -f frontend-service.yaml
 ```
 
-### Step 7: Verify Deployment
-
+**Wait for frontend to be ready:**
 ```bash
-# Check all pods
-kubectl get pods -n sentinel
-
-# Check services
-kubectl get services -n sentinel
-
-# Check ingress
-kubectl get ingress -n sentinel
-
-# View logs
-kubectl logs -f deployment/sentinel-backend -n sentinel
-kubectl logs -f deployment/sentinel-frontend -n sentinel
+kubectl wait --for=condition=ready pod -l component=frontend -n sentinel --timeout=300s
 ```
 
-## 🔍 Monitoring and Health Checks
-
-### Health Endpoints
-
-- Backend: `http://sentinel-backend:8000/health`
-- Frontend: `http://sentinel-frontend/`
-
-### Check Pod Status
+### Step 6: Get Public IP
 
 ```bash
-# Get pod status
+# Get the LoadBalancer IP (this may take 2-3 minutes)
+kubectl get service sentinel-frontend -n sentinel --watch
+```
+
+**Once you see EXTERNAL-IP (not <pending>):**
+```bash
+export EXTERNAL_IP=$(kubectl get service sentinel-frontend -n sentinel -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+echo "Application URL: http://$EXTERNAL_IP"
+```
+
+### Step 7: Test the Application
+
+```bash
+# Test backend health
+curl http://$EXTERNAL_IP:8000/health
+
+# Open in browser
+echo "Frontend: http://$EXTERNAL_IP"
+echo "Backend API: http://$EXTERNAL_IP:8000"
+echo "API Docs: http://$EXTERNAL_IP:8000/docs"
+```
+
+## 🔍 Verification Commands
+
+### Check Everything
+
+```bash
+# All resources in sentinel namespace
+kubectl get all -n sentinel
+
+# Pod details
 kubectl get pods -n sentinel -o wide
 
-# Describe pod for details
-kubectl describe pod <pod-name> -n sentinel
+# Pod logs
+kubectl logs -f deployment/sentinel-backend -n sentinel
+kubectl logs -f deployment/sentinel-frontend -n sentinel
 
-# Get events
+# Service details
+kubectl get services -n sentinel
+kubectl describe service sentinel-frontend -n sentinel
+
+# Events (useful for troubleshooting)
 kubectl get events -n sentinel --sort-by='.lastTimestamp'
 ```
 
-### View Logs
+### Check Resource Usage
 
 ```bash
-# Backend logs
-kubectl logs -f deployment/sentinel-backend -n sentinel --tail=100
-
-# Frontend logs
-kubectl logs -f deployment/sentinel-frontend -n sentinel --tail=100
-
-# Previous container logs (if pod crashed)
-kubectl logs <pod-name> -n sentinel --previous
+# CPU and Memory usage
+kubectl top nodes
+kubectl top pods -n sentinel
 ```
 
-## 📈 Scaling
+## 🐛 Troubleshooting
 
-### Manual Scaling
+### Pod is in Pending state
 
 ```bash
-# Scale backend
-kubectl scale deployment sentinel-backend --replicas=5 -n sentinel
-
-# Scale frontend
-kubectl scale deployment sentinel-frontend --replicas=4 -n sentinel
+kubectl describe pod <pod-name> -n sentinel
 ```
 
-### Auto-scaling (HPA)
+Common causes:
+- Insufficient resources (CPU/RAM)
+- Image pull errors
+- Volume mount issues
 
-Auto-scaling is configured in the service YAML files:
-
-- **Backend**: 3-10 pods based on CPU (70%) and Memory (80%)
-- **Frontend**: 2-6 pods based on CPU (70%) and Memory (80%)
-
-Check HPA status:
-```bash
-kubectl get hpa -n sentinel
-kubectl describe hpa sentinel-backend-hpa -n sentinel
-```
-
-## 🔒 Security Best Practices
-
-1. **Use Azure Key Vault** for secrets management
-2. **Enable Pod Security Standards** in namespace
-3. **Use Network Policies** to restrict traffic
-4. **Enable RBAC** for fine-grained access control
-5. **Scan images** for vulnerabilities before deployment
-6. **Use private container registry** (Azure Container Registry)
-7. **Enable audit logging** on AKS cluster
-
-## 🔄 Updates and Rollbacks
-
-### Rolling Update
+### Pod is in ImagePullBackOff
 
 ```bash
-# Update image
-kubectl set image deployment/sentinel-backend backend=abhaysahu403/sentinel-backend:v2.0.0 -n sentinel
-
-# Check rollout status
-kubectl rollout status deployment/sentinel-backend -n sentinel
+kubectl describe pod <pod-name> -n sentinel
 ```
 
-### Rollback
-
+Fix:
 ```bash
-# View rollout history
-kubectl rollout history deployment/sentinel-backend -n sentinel
-
-# Rollback to previous version
-kubectl rollout undo deployment/sentinel-backend -n sentinel
-
-# Rollback to specific revision
-kubectl rollout undo deployment/sentinel-backend --to-revision=2 -n sentinel
+# Attach ACR to AKS cluster
+az aks update --resource-group your-rg --name your-aks --attach-acr acrsentinelabhay
 ```
-
-## 🗑️ Cleanup
-
-```bash
-# Delete all resources in sentinel namespace
-kubectl delete namespace sentinel
-
-# Or delete individual components
-kubectl delete -f frontend-service.yaml
-kubectl delete -f frontend-deployment.yaml
-kubectl delete -f backend-service.yaml
-kubectl delete -f backend-deployment.yaml
-kubectl delete -f neo4j-deployment.yaml
-kubectl delete -f postgres-deployment.yaml
-kubectl delete -f configmap.yaml
-kubectl delete -f namespace.yaml
-```
-
-## 📊 Resource Requirements
-
-### Minimum Cluster Requirements
-
-- **Nodes**: 3 nodes (for high availability)
-- **Node Size**: Standard_D4s_v3 (4 vCPU, 16 GB RAM) or larger
-- **Total Resources**:
-  - CPU: 20 vCPU (requests) / 40 vCPU (limits)
-  - Memory: 40 GB (requests) / 80 GB (limits)
-  - Storage: ~100 GB persistent storage
-
-### Per-Pod Resources
-
-| Component | Replicas | CPU Request | CPU Limit | Memory Request | Memory Limit |
-|-----------|----------|-------------|-----------|----------------|--------------|
-| Backend | 3-10 | 500m | 2000m | 512Mi | 2Gi |
-| Frontend | 2-6 | 100m | 500m | 128Mi | 512Mi |
-| PostgreSQL | 1 | 500m | 2000m | 1Gi | 4Gi |
-| Neo4j | 1 | 500m | 2000m | 2Gi | 4Gi |
-
-## 🌐 DNS Configuration
-
-After deployment, update your DNS records:
-
-```
-sentinel.yourdomain.com       → Ingress IP
-api.sentinel.yourdomain.com   → Ingress IP
-```
-
-Get Ingress IP:
-```bash
-kubectl get ingress sentinel-ingress -n sentinel
-```
-
-## 🛠️ Troubleshooting
 
 ### Pod is in CrashLoopBackOff
 
 ```bash
 # Check logs
+kubectl logs <pod-name> -n sentinel
 kubectl logs <pod-name> -n sentinel --previous
-
-# Check events
-kubectl describe pod <pod-name> -n sentinel
 ```
 
-### ImagePullBackOff Error
+### Can't access via LoadBalancer IP
 
 ```bash
-# Verify image name and tag
-kubectl describe pod <pod-name> -n sentinel
+# Check service
+kubectl get service sentinel-frontend -n sentinel
+kubectl describe service sentinel-frontend -n sentinel
 
-# Check if image exists
-docker pull abhaysahu403/sentinel-backend:latest
+# Check if pod is ready
+kubectl get pods -n sentinel
 ```
 
-### Database Connection Issues
+### Backend can't find database
+
+**This is expected!** Backend uses SQLite (file-based), not PostgreSQL. Check logs:
+```bash
+kubectl logs deployment/sentinel-backend -n sentinel | grep "Database seeded"
+```
+
+## 📝 Common Operations
+
+### View Logs
 
 ```bash
-# Check if database pod is running
-kubectl get pods -n sentinel -l component=postgres
+# Tail logs
+kubectl logs -f deployment/sentinel-backend -n sentinel
 
-# Test connection from backend pod
-kubectl exec -it <backend-pod> -n sentinel -- /bin/bash
-# Inside pod: nc -zv postgres.sentinel.svc.cluster.local 5432
+# Last 100 lines
+kubectl logs deployment/sentinel-backend -n sentinel --tail=100
+
+# All pods with label
+kubectl logs -l app=sentinel -n sentinel --tail=50
 ```
 
-## 📞 Support
+### Execute Commands in Pod
 
-For issues or questions:
-- GitHub Issues: https://github.com/abhaysahu403/SENTINEL-Energy-Supply-Chain-Resilience/issues
-- Email: abhaysahu403@gmail.com
+```bash
+# Get a shell
+kubectl exec -it deployment/sentinel-backend -n sentinel -- /bin/bash
+
+# Run a command
+kubectl exec deployment/sentinel-backend -n sentinel -- ls -la /app
+```
+
+### Restart a Deployment
+
+```bash
+kubectl rollout restart deployment/sentinel-backend -n sentinel
+kubectl rollout restart deployment/sentinel-frontend -n sentinel
+```
+
+### Update Image Version
+
+```bash
+# Tag new version in ACR
+docker tag sentinel-backend:latest acrsentinelabhay.azurecr.io/sentinel-backend:v2
+docker push acrsentinelabhay.azurecr.io/sentinel-backend:v2
+
+# Update deployment
+kubectl set image deployment/sentinel-backend backend=acrsentinelabhay.azurecr.io/sentinel-backend:v2 -n sentinel
+
+# Check rollout status
+kubectl rollout status deployment/sentinel-backend -n sentinel
+```
+
+## 🔄 Update Workflow
+
+### Edit ConfigMap
+
+```bash
+# Edit configmap.yaml, then:
+kubectl apply -f configmap.yaml
+
+# Restart pods to pick up new config
+kubectl rollout restart deployment/sentinel-backend -n sentinel
+kubectl rollout restart deployment/sentinel-frontend -n sentinel
+```
+
+### Edit Secrets
+
+```bash
+# Create new secret
+kubectl create secret generic sentinel-secrets \
+  --namespace=sentinel \
+  --from-literal=jwt-secret="new-secret" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Restart pods
+kubectl rollout restart deployment/sentinel-backend -n sentinel
+```
+
+## 🗑️ Cleanup
+
+### Delete All Sentinel Resources
+
+```bash
+# Delete the entire namespace (removes everything)
+kubectl delete namespace sentinel
+```
+
+### Delete Individual Components
+
+```bash
+kubectl delete -f frontend-service.yaml
+kubectl delete -f frontend-deployment.yaml
+kubectl delete -f backend-service.yaml
+kubectl delete -f backend-deployment.yaml
+kubectl delete -f configmap.yaml
+kubectl delete secret sentinel-secrets -n sentinel
+kubectl delete -f namespace.yaml
+```
+
+## 📈 Scaling (Optional - if you upgrade cluster)
+
+If you increase your cluster size, you can scale:
+
+```bash
+# Scale backend to 2 replicas
+kubectl scale deployment sentinel-backend --replicas=2 -n sentinel
+
+# Scale frontend to 2 replicas
+kubectl scale deployment sentinel-frontend --replicas=2 -n sentinel
+```
+
+## 🔐 Security Notes
+
+1. **JWT Secret**: Currently using a simple secret. In production:
+   ```bash
+   # Generate secure secret
+   openssl rand -base64 32
+   ```
+
+2. **Network Policies**: Not included for simplicity. Add later for production.
+
+3. **RBAC**: Default service accounts used. Define specific roles for production.
+
+4. **Pod Security**: Not enforced. Add PodSecurityPolicy or PodSecurityStandards for production.
+
+## ⚡ Performance Tips
+
+1. **Monitor resource usage:**
+   ```bash
+   kubectl top pods -n sentinel
+   ```
+
+2. **If pods are slow to start**, check:
+   ```bash
+   kubectl describe pod <pod-name> -n sentinel
+   ```
+
+3. **If running out of resources**, reduce limits in deployment YAMLs.
+
+## 🎓 Learning Path
+
+After successful deployment, learn:
+
+1. ✅ **Namespace isolation**
+2. ✅ **ConfigMaps and Secrets**
+3. ✅ **Deployments and ReplicaSets**
+4. ✅ **Services (ClusterIP vs LoadBalancer)**
+5. ✅ **Health checks (liveness/readiness probes)**
+6. ✅ **Resource limits and requests**
+7. ✅ **kubectl commands**
+8. ⬜ Azure DevOps Pipelines
+9. ⬜ Helm charts
+10. ⬜ Azure Key Vault integration
+11. ⬜ Azure Monitor and Application Insights
+12. ⬜ Ingress controllers
+13. ⬜ HPA (Horizontal Pod Autoscaler)
+14. ⬜ Blue-Green deployments
+
+## 📞 Quick Reference
+
+```bash
+# Get everything
+kubectl get all -n sentinel
+
+# Watch pods
+kubectl get pods -n sentinel -w
+
+# Describe resource
+kubectl describe <resource-type> <resource-name> -n sentinel
+
+# Logs
+kubectl logs -f <pod-name> -n sentinel
+
+# Events
+kubectl get events -n sentinel --sort-by='.lastTimestamp'
+
+# Port forward (for testing without LoadBalancer)
+kubectl port-forward deployment/sentinel-backend 8000:8000 -n sentinel
+kubectl port-forward deployment/sentinel-frontend 5173:80 -n sentinel
+```
+
+## 🎯 Success Criteria
+
+You'll know it's working when:
+1. ✅ Both pods show `Running` status
+2. ✅ `kubectl get pods -n sentinel` shows 2/2 containers ready
+3. ✅ LoadBalancer has an EXTERNAL-IP assigned
+4. ✅ `curl http://<EXTERNAL-IP>/health` returns `{"status":"ok"}`
+5. ✅ Opening `http://<EXTERNAL-IP>` in browser shows the dashboard
+6. ✅ Backend logs show "Database seeded" message
+
+---
+
+**Next Steps:** Once this is running, you can integrate with Azure DevOps Pipelines for CI/CD automation!
