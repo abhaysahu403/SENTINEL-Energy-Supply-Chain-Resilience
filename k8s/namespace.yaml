@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sentinel
+  labels:
+    name: sentinel
+    environment: production
+    app: sentinel
+    managed-by: kubectl
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sentinel-quota
+  namespace: sentinel
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    persistentvolumeclaims: "10"
+    services.loadbalancers: "2"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sentinel-limits
+  namespace: sentinel
+spec:
+  limits:
+  - max:
+      cpu: "4"
+      memory: 8Gi
+    min:
+      cpu: 50m
+      memory: 64Mi
+    default:
+      cpu: 500m
+      memory: 512Mi
+    defaultRequest:
+      cpu: 100m
+      memory: 128Mi
+    type: Container
+  - max:
+      cpu: "8"
+      memory: 16Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+    type: Pod

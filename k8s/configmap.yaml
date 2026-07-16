@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinel-config
+  namespace: sentinel
+  labels:
+    app: sentinel
+data:
+  # Backend API URL for frontend
+  api-base-url: "https://api.sentinel.yourdomain.com"
+  
+  # Neo4j Configuration
+  neo4j-uri: "bolt://neo4j.sentinel.svc.cluster.local:7687"
+  
+  # Kafka Configuration
+  kafka-bootstrap-servers: "kafka.sentinel.svc.cluster.local:9092"
+  
+  # Application Settings
+  risk-auto-trigger-threshold: "45.0"
+  simulator-interval-seconds: "30"
+  
+  # Logging Configuration
+  log-level: "INFO"
+  log-format: "json"
+  
+  # CORS Origins (comma-separated)
+  cors-origins: "https://sentinel.yourdomain.com,https://api.sentinel.yourdomain.com"

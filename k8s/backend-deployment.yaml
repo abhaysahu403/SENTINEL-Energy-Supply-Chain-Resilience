@@ -1,0 +1,200 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-backend
+  namespace: sentinel
+  labels:
+    app: sentinel
+    component: backend
+    tier: application
+    version: v1.0.0
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: sentinel
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: sentinel
+        component: backend
+        tier: application
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: sentinel-backend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: backend
+        image: abhaysahu403/sentinel-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        # Database Configuration
+        - name: SENTINEL_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: database-url
+        
+        # Neo4j Configuration
+        - name: NEO4J_URI
+          valueFrom:
+            configMapKeyRef:
+              name: sentinel-config
+              key: neo4j-uri
+        - name: NEO4J_USER
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: neo4j-user
+        - name: NEO4J_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: neo4j-password
+        
+        # Kafka Configuration
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              name: sentinel-config
+              key: kafka-bootstrap-servers
+        
+        # Security
+        - name: SENTINEL_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: jwt-secret
+        
+        # Application Configuration
+        - name: SENTINEL_AUTOPLAY
+          value: "0"
+        - name: SENTINEL_SIM_INTERVAL
+          value: "30"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        
+        # External API Keys (Optional)
+        - name: EIA_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: eia-api-key
+              optional: true
+        - name: MARINETRAFFIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: marinetraffic-api-key
+              optional: true
+        
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 12
+        
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: tmp
+          mountPath: /tmp
+      
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: sentinel-backend-data
+      - name: tmp
+        emptyDir: {}
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - backend
+              topologyKey: kubernetes.io/hostname
+      
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sentinel-backend
+  namespace: sentinel
+  labels:
+    app: sentinel
+    component: backend
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sentinel-backend-data
+  namespace: sentinel
+  labels:
+    app: sentinel
+    component: backend
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: managed-premium
