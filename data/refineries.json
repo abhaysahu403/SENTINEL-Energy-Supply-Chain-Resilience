@@ -1,0 +1,47 @@
+[
+  {
+    "id": "jamnagar",
+    "name": "Reliance Jamnagar",
+    "operator": "Reliance Industries",
+    "location": [69.85, 22.34],
+    "capacity_mbd": 1.24,
+    "grade_compatibility": ["Basrah Medium/Heavy", "Arab Light/Medium", "Urals/ESPO", "Murban", "WTI Midland", "Bonny Light", "Tupi"],
+    "current_crude_mix": {"iraq": 0.30, "saudi_arabia": 0.20, "russia": 0.30, "uae": 0.10, "usa": 0.10}
+  },
+  {
+    "id": "vadinar",
+    "name": "Nayara Vadinar",
+    "operator": "Nayara Energy",
+    "location": [69.7, 22.47],
+    "capacity_mbd": 0.4,
+    "grade_compatibility": ["Urals/ESPO", "Basrah Medium/Heavy", "Arab Light/Medium"],
+    "current_crude_mix": {"russia": 0.55, "iraq": 0.25, "saudi_arabia": 0.20}
+  },
+  {
+    "id": "panipat",
+    "name": "IOCL Panipat",
+    "operator": "Indian Oil Corporation",
+    "location": [76.97, 29.39],
+    "capacity_mbd": 0.3,
+    "grade_compatibility": ["Basrah Medium/Heavy", "Arab Light/Medium", "Murban"],
+    "current_crude_mix": {"iraq": 0.4, "saudi_arabia": 0.35, "uae": 0.25}
+  },
+  {
+    "id": "mumbai_bpcl",
+    "name": "BPCL Mumbai",
+    "operator": "Bharat Petroleum",
+    "location": [72.85, 19.0],
+    "capacity_mbd": 0.24,
+    "grade_compatibility": ["Arab Light/Medium", "Basrah Medium/Heavy", "Bonny Light"],
+    "current_crude_mix": {"saudi_arabia": 0.45, "iraq": 0.35, "nigeria": 0.2}
+  },
+  {
+    "id": "vizag_hpcl",
+    "name": "HPCL Visakhapatnam",
+    "operator": "Hindustan Petroleum",
+    "location": [83.29, 17.68],
+    "capacity_mbd": 0.166,
+    "grade_compatibility": ["Basrah Medium/Heavy", "Arab Light/Medium", "Urals/ESPO"],
+    "current_crude_mix": {"iraq": 0.4, "russia": 0.35, "saudi_arabia": 0.25}
+  }
+]

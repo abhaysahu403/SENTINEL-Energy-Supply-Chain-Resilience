@@ -1,0 +1,344 @@
+# ================================
+# SENTINEL Application .gitignore
+# ================================
+
+# ============= PYTHON =============
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+sentinel.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ============= NODE / FRONTEND =============
+# Dependencies
+node_modules/
+jspm_packages/
+bower_components/
+
+# Production builds
+/dist
+/build
+/.svelte-kit
+/.next
+/out
+/.nuxt
+/.vuepress/dist
+
+# Testing
+/coverage
+.nyc_output
+
+# Cache
+.npm
+.eslintcache
+.cache
+.parcel-cache
+.next
+.nuxt
+.vuepress/.temp
+.vuepress/.cache
+.docusaurus
+
+# TypeScript
+*.tsbuildinfo
+.tmp/
+node_modules/.tmp/
+
+# Vite
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Package manager lock files (optional - remove if you want to commit them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ============= DOCKER =============
+# Docker volumes and build cache
+docker-compose.override.yml
+.docker/
+
+# ============= DATABASE =============
+# PostgreSQL
+*.sql
+*.dump
+pgdata/
+postgres_data/
+
+# Neo4j
+neo4j_data/
+
+# ============= KAFKA / ZOOKEEPER =============
+kafka_data/
+zookeeper_data/
+
+# ============= IDE =============
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+*.swp
+*.swo
+*~
+
+# ============= SECURITY =============
+# API Keys and secrets (CRITICAL)
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+.secrets/
+credentials.json
+service-account.json
+
+# Environment files with sensitive data
+.env.production
+.env.*.production
+
+# ============= DEPLOYMENT =============
+# Kubernetes secrets
+k8s/secrets/
+*.secret.yaml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# ============= TEMPORARY FILES =============
+# General temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.orig
+
+# ============= APPLICATION SPECIFIC =============
+# SENTINEL backend
+backend/sentinel.db
+backend/app/**/*.pyc
+backend/.pytest_cache/
+
+# SENTINEL frontend build artifacts
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/node_modules/
+
+# Data files (if they're large or generated - uncomment if needed)
+# data/*.csv
+# data/*.json
+# data/*.parquet
+
+# ============= CI/CD =============
+# GitHub Actions artifacts
+.github/workflows/*.log
+
+# ============= MONITORING / OBSERVABILITY =============
+# Prometheus data
+prometheus_data/
+
+# Grafana data
+grafana_data/
+
+# ============= MISC =============
+# Mac
+.AppleDouble
+.LSOverride
+
+# Windows
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Backup files
+*~
+*.bak
+*.gho
+*.ori
+*.orig
+*.tmp

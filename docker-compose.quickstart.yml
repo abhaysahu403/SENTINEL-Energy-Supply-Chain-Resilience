@@ -1,0 +1,27 @@
+version: "3.9"
+
+# Quick-start stack: just the backend (SQLite + in-memory knowledge graph +
+# in-process event bus) and the frontend. No Postgres/Neo4j/Kafka required.
+# Use this to see the whole product running in under a minute:
+#   docker-compose -f docker-compose.quickstart.yml up --build
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      SENTINEL_AUTOPLAY: "1"
+      SENTINEL_JWT_SECRET: dev-secret
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"

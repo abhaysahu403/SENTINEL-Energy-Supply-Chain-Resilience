@@ -1,0 +1,21 @@
+{
+  "spr": {
+    "total_capacity_mb": 39.0,
+    "current_fill_mb": 37.5,
+    "national_daily_consumption_mb": 5.5,
+    "days_of_cover": 9.5,
+    "floor_reserve_pct": 20.0,
+    "replenishment_lead_time_days": 45,
+    "note": "Figures approximate India's ISPRL Strategic Petroleum Reserve public disclosures (Vizag, Mangalore, Padur caverns)."
+  },
+  "national": {
+    "total_crude_imports_mbd": 4.9,
+    "import_dependency_pct": 88.0,
+    "hormuz_transit_dependency_pct": 42.0,
+    "avg_retail_pass_through_days": 12,
+    "fuel_price_elasticity_to_crude": 0.35,
+    "power_sector_diesel_substitution_pct_per_10pct_gas_shortfall": 4.0,
+    "gdp_elasticity_to_10usd_oil_shock": -0.2,
+    "note": "gdp_elasticity_to_10usd_oil_shock: approximate historical relationship cited in multiple IMF/RBI studies -- a sustained $10/bbl rise in crude is associated with roughly 0.2-0.3 percentage point drag on India's GDP growth. Used here as an explicit, adjustable coefficient, not a black-box output."
+  }
+}

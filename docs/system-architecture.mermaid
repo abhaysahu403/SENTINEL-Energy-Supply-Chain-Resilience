@@ -1,0 +1,67 @@
+flowchart TB
+    subgraph L1["LAYER 1 — DATA INGESTION"]
+        NEWS["News / GDELT / RSS Feeds"]
+        AIS["AIS Vessel Tracking"]
+        SANC["Sanctions Registries (OFAC / UN)"]
+        PRICE["Commodity Price APIs (EIA, Brent/WTI)"]
+        STATIC["Refinery / Port / Corridor Static Data"]
+    end
+
+    subgraph L2["LAYER 2 — INTELLIGENCE & DATA SERVICES"]
+        RAG["RAG Pipeline (Vector DB: Qdrant / pgvector)"]
+        KG["Knowledge Graph (Neo4j)\nSupplier-Route-Risk-Refinery"]
+        FORECAST["Forecasting Models\n(XGBoost / Prophet)"]
+        OPT["Optimization Engine\n(MILP - OR-Tools / PuLP)"]
+        FEAT["Feature Store / TimescaleDB"]
+    end
+
+    subgraph L3["LAYER 3 — AGENT ORCHESTRATION"]
+        ORCH["Orchestrator Agent (LangGraph)"]
+        M1["M1: Geopolitical Risk\nIntelligence Agent"]
+        M2["M2: Disruption Scenario\nModeller"]
+        M3["M3: Adaptive Procurement\nOrchestrator"]
+        M4["M4: Strategic Reserve\nOptimisation Agent"]
+    end
+
+    subgraph L4["LAYER 4 — API GATEWAY / BFF"]
+        GW["FastAPI Gateway\nAuth + REST + WebSocket"]
+    end
+
+    subgraph L5["LAYER 5 — FRONTEND (React + TS)"]
+        DASH["War-Room Dashboard"]
+        SIM["Scenario Simulator"]
+        PROC["Procurement Console"]
+        RES["Reserve Planner"]
+        TWIN["Digital Twin Map (deck.gl)"]
+        TRACE["Explainability / Agent Trace View"]
+    end
+
+    NEWS --> RAG
+    AIS --> KG
+    SANC --> RAG
+    PRICE --> FEAT
+    STATIC --> KG
+
+    RAG --> M1
+    KG --> M1
+    KG --> M3
+    FEAT --> M1
+    FORECAST --> M2
+    OPT --> M3
+    OPT --> M4
+
+    M1 --> ORCH
+    ORCH --> M2
+    ORCH --> M3
+    ORCH --> M4
+    M2 --> ORCH
+    M3 --> ORCH
+    M4 --> ORCH
+
+    ORCH --> GW
+    GW <--> DASH
+    GW <--> SIM
+    GW <--> PROC
+    GW <--> RES
+    GW <--> TWIN
+    GW <--> TRACE

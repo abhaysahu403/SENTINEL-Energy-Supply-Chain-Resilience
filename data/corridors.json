@@ -1,0 +1,47 @@
+[
+  {
+    "id": "hormuz",
+    "name": "Strait of Hormuz",
+    "type": "chokepoint",
+    "coordinates": [56.25, 26.57],
+    "baseline_daily_volume_mbd": 21.0,
+    "india_dependency_pct": 42.0,
+    "note": "Iran/Oman strait; ~21 million barrels/day of global crude+products transit here. India sources ~40-45% of its crude via this corridor (Gulf suppliers: Iraq, Saudi Arabia, UAE, Kuwait)."
+  },
+  {
+    "id": "bab_el_mandeb",
+    "name": "Bab-el-Mandeb / Red Sea",
+    "type": "chokepoint",
+    "coordinates": [43.3, 12.6],
+    "baseline_daily_volume_mbd": 8.8,
+    "india_dependency_pct": 9.0,
+    "note": "Connects Red Sea to Gulf of Aden; alternate route for Gulf crude to reach India via Suez-bound traffic, also relevant for product/LNG flows. Subject to Houthi attack risk since 2023."
+  },
+  {
+    "id": "malacca",
+    "name": "Strait of Malacca",
+    "type": "chokepoint",
+    "coordinates": [100.5, 3.0],
+    "baseline_daily_volume_mbd": 16.0,
+    "india_dependency_pct": 3.0,
+    "note": "Relevant mainly for India's crude re-export/product trade with East Asia; minor direct import dependency."
+  },
+  {
+    "id": "cape_of_good_hope",
+    "name": "Cape of Good Hope (alternate route)",
+    "type": "route",
+    "coordinates": [18.4, -34.4],
+    "baseline_daily_volume_mbd": 3.5,
+    "india_dependency_pct": 0.0,
+    "note": "Not a chokepoint but the standard reroute option when Bab-el-Mandeb/Suez is unsafe. Adds ~10-14 days transit time West Africa/Gulf to India."
+  },
+  {
+    "id": "west_coast_direct",
+    "name": "West Coast India Direct (Gulf-Kandla/Jamnagar/Vadinar)",
+    "type": "route",
+    "coordinates": [69.0, 22.0],
+    "baseline_daily_volume_mbd": 3.2,
+    "india_dependency_pct": 65.0,
+    "note": "Primary receiving corridor for Gulf crude into India's largest west-coast refineries."
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "evt_2025_us_iran_standoff",
+    "source": "GDELT",
+    "headline": "US-Iran military standoff escalates near Strait of Hormuz",
+    "raw_text": "Heightened naval activity between US and Iranian forces near the Strait of Hormuz has raised fears of a shipping disruption. Brent crude jumped over 8% intraday as traders priced in transit risk.",
+    "event_type": "military_standoff",
+    "affected_corridor": "hormuz",
+    "affected_suppliers": ["iraq", "saudi_arabia", "uae", "iran"],
+    "severity": 78,
+    "timestamp": "2025-06-14T09:00:00Z"
+  },
+  {
+    "id": "evt_2026_sanctions_pressure",
+    "source": "OFAC",
+    "headline": "US Treasury expands sanctions targeting Iranian crude exports and shadow fleet",
+    "raw_text": "New OFAC designations target vessels and intermediaries allegedly facilitating Iranian crude sales, adding compliance risk for buyers of blended Gulf cargoes.",
+    "event_type": "sanctions_expansion",
+    "affected_corridor": "hormuz",
+    "affected_suppliers": ["iran"],
+    "severity": 55,
+    "timestamp": "2026-02-03T11:00:00Z"
+  },
+  {
+    "id": "evt_2026_red_sea_attack",
+    "source": "GDELT",
+    "headline": "Houthi forces claim missile attack on tanker in southern Red Sea",
+    "raw_text": "A commercial tanker reported a near-miss missile strike transiting the Bab-el-Mandeb strait, prompting several shipping majors to again suspend Red Sea transits in favor of the Cape of Good Hope route.",
+    "event_type": "maritime_attack",
+    "affected_corridor": "bab_el_mandeb",
+    "affected_suppliers": [],
+    "severity": 62,
+    "timestamp": "2026-04-22T06:30:00Z"
+  },
+  {
+    "id": "evt_2026_opec_meeting",
+    "source": "GDELT",
+    "headline": "OPEC+ signals possible emergency production adjustment amid demand uncertainty",
+    "raw_text": "OPEC+ delegates hinted at a potential emergency meeting to discuss coordinated output changes in response to the escalating Gulf security situation.",
+    "event_type": "opec_signal",
+    "affected_corridor": "hormuz",
+    "affected_suppliers": ["saudi_arabia", "uae", "iraq"],
+    "severity": 40,
+    "timestamp": "2026-06-01T14:00:00Z"
+  }
+]
