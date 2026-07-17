@@ -93,13 +93,5 @@ spec:
           timeoutSeconds: 3
           successThreshold: 1
           failureThreshold: 12
-        
-        volumeMounts:
-        - name: data
-          mountPath: /app
-      
-      volumes:
-      - name: data
-        emptyDir: {}
       
       terminationGracePeriodSeconds: 30
