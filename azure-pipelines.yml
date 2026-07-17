@@ -17,10 +17,10 @@ pool:
 
 variables:
   # Azure Resources
-  azureSubscription: 'YOUR_SERVICE_CONNECTION_NAME'  # TODO: Replace with your service connection name
+  azureSubscription: 'Azure-Sentinel-ServiceConnection'
   resourceGroup: 'rg-sentinel-dev'
   aksCluster: 'aks-sentinel-dev'
-  acrName: 'acrsentinelabhay'
+  acrServiceConnection: 'acrsentinelabhay'
   acrLoginServer: 'acrsentinelabhay.azurecr.io'
   
   # Images
@@ -74,7 +74,7 @@ stages:
       displayName: 'Login to ACR'
       inputs:
         command: login
-        containerRegistry: '$(acrName)'
+        containerRegistry: '$(acrServiceConnection)'
     
     # Push Backend Image to ACR
     - task: Docker@2
@@ -82,7 +82,7 @@ stages:
       inputs:
         command: push
         repository: 'sentinel-backend'
-        containerRegistry: '$(acrName)'
+        containerRegistry: '$(acrServiceConnection)'
         tags: |
           $(imageTag)
           latest
@@ -93,7 +93,7 @@ stages:
       inputs:
         command: push
         repository: 'sentinel-frontend'
-        containerRegistry: '$(acrName)'
+        containerRegistry: '$(acrServiceConnection)'
         tags: |
           $(imageTag)
           latest
