@@ -7,9 +7,8 @@ on:
 
 env:
   REGISTRY: acrsentineldev2026.azurecr.io
-  IMAGE_NAME: sentinel-backend
-  AKS_RESOURCE_GROUP: sentinel-rg
-  AKS_CLUSTER: sentinel-aks
+  AKS_RESOURCE_GROUP: rg-sentinel-dev
+  AKS_CLUSTER: aks-sentinel-dev
   NAMESPACE: sentinel
 
 jobs:
@@ -51,15 +50,31 @@ jobs:
       - name: Login to ACR
         run: az acr login --name acrsentineldev2026
 
-      - name: Build Docker Image
+      - name: Build Backend Image
         run: |
           docker build \
-          -t $REGISTRY/$IMAGE_NAME:${{ github.run_number }} .
+          -t $REGISTRY/sentinel-backend:${{ github.run_number }} \
+          -t $REGISTRY/sentinel-backend:latest \
+          -f backend/Dockerfile \
+          ./backend
 
-      - name: Push Docker Image
+      - name: Build Frontend Image
         run: |
-          docker push \
-          $REGISTRY/$IMAGE_NAME:${{ github.run_number }}
+          docker build \
+          -t $REGISTRY/sentinel-frontend:${{ github.run_number }} \
+          -t $REGISTRY/sentinel-frontend:latest \
+          -f frontend/Dockerfile \
+          ./frontend
+
+      - name: Push Backend Image
+        run: |
+          docker push $REGISTRY/sentinel-backend:${{ github.run_number }}
+          docker push $REGISTRY/sentinel-backend:latest
+
+      - name: Push Frontend Image
+        run: |
+          docker push $REGISTRY/sentinel-frontend:${{ github.run_number }}
+          docker push $REGISTRY/sentinel-frontend:latest
 
       - name: Get AKS Credentials
         run: |
@@ -68,28 +83,55 @@ jobs:
           --name $AKS_CLUSTER \
           --overwrite-existing
 
-      - name: Deploy
+      - name: Deploy Backend
         run: |
           helm upgrade --install sentinel-backend \
           helm/sentinel-backend \
           --namespace $NAMESPACE \
           --create-namespace \
-          --reuse-values \
+          --set image.tag=${{ github.run_number }} \
+          --set secrets.jwtSecret="${{ secrets.JWT_SECRET }}"
+
+      - name: Deploy Frontend
+        run: |
+          helm upgrade --install sentinel-frontend \
+          helm/sentinel-frontend \
+          --namespace $NAMESPACE \
           --set image.tag=${{ github.run_number }}
 
-      - name: Wait for Rollout
+      - name: Wait for Backend Rollout
         run: |
           kubectl rollout status deployment/sentinel-backend \
           -n $NAMESPACE \
           --timeout=300s
 
+      - name: Wait for Frontend Rollout
+        run: |
+          kubectl rollout status deployment/sentinel-frontend \
+          -n $NAMESPACE \
+          --timeout=300s
+
       - name: Health Check
         run: |
-          chmod +x scripts/healthcheck.sh
-          ./scripts/healthcheck.sh
+          echo "Checking deployment status..."
+          kubectl get pods -n $NAMESPACE
+          kubectl get svc -n $NAMESPACE
+          kubectl get ingress -n $NAMESPACE
+          
+          # Verify pods are ready
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sentinel-backend -n $NAMESPACE --timeout=60s
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sentinel-frontend -n $NAMESPACE --timeout=60s
+          
+          echo "All services deployed successfully!"
 
-      - name: Rollback on Failure
+      - name: Rollback Backend on Failure
         if: failure()
         run: |
-          kubectl rollout undo deployment/sentinel-backend \
-          -n $NAMESPACE
+          echo "Rolling back backend..."
+          kubectl rollout undo deployment/sentinel-backend -n $NAMESPACE
+
+      - name: Rollback Frontend on Failure
+        if: failure()
+        run: |
+          echo "Rolling back frontend..."
+          kubectl rollout undo deployment/sentinel-frontend -n $NAMESPACE

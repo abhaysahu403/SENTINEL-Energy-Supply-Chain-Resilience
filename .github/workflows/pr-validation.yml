@@ -38,7 +38,16 @@ jobs:
           cd backend
           pytest
 
-      - name: Build Docker Image
+      - name: Build Backend Docker Image
         run: |
           docker build \
-          -t sentinel-backend:pr-${{ github.run_number }} .
+          -t sentinel-backend:pr-${{ github.run_number }} \
+          -f backend/Dockerfile \
+          ./backend
+
+      - name: Build Frontend Docker Image
+        run: |
+          docker build \
+          -t sentinel-frontend:pr-${{ github.run_number }} \
+          -f frontend/Dockerfile \
+          ./frontend

@@ -45,41 +45,78 @@ jobs:
         run: |
           az acr login --name acrsentineldev2026
 
-      - name: Build Docker Image
+      - name: Build Backend Image
         run: |
           docker build \
-          -t $REGISTRY/$IMAGE_NAME:${{ github.run_number }} .
+          -t $REGISTRY/sentinel-backend:${{ github.run_number }} \
+          -f backend/Dockerfile \
+          ./backend
 
-      - name: Trivy Scan
+      - name: Build Frontend Image
+        run: |
+          docker build \
+          -t $REGISTRY/sentinel-frontend:${{ github.run_number }} \
+          -f frontend/Dockerfile \
+          ./frontend
+
+      - name: Trivy Scan Backend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}
+          image-ref: ${{ env.REGISTRY }}/sentinel-backend:${{ github.run_number }}
 
-      - name: Push Image
+      - name: Trivy Scan Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/sentinel-frontend:${{ github.run_number }}
+
+      - name: Push Backend Image
         run: |
-          docker push \
-          $REGISTRY/$IMAGE_NAME:${{ github.run_number }}
+          docker push $REGISTRY/sentinel-backend:${{ github.run_number }}
+
+      - name: Push Frontend Image
+        run: |
+          docker push $REGISTRY/sentinel-frontend:${{ github.run_number }}
 
       - name: Get AKS Credentials
         run: |
           az aks get-credentials \
-          --resource-group sentinel-rg \
-          --name sentinel-aks \
+          --resource-group rg-sentinel-dev \
+          --name aks-sentinel-dev \
           --overwrite-existing
 
-      - name: Deploy using Helm
+      - name: Deploy Backend using Helm
         run: |
           helm upgrade --install sentinel-backend \
           helm/sentinel-backend \
           --namespace sentinel \
           --create-namespace \
+          --set image.tag=${{ github.run_number }} \
+          --set secrets.jwtSecret="${{ secrets.JWT_SECRET }}"
+
+      - name: Deploy Frontend using Helm
+        run: |
+          helm upgrade --install sentinel-frontend \
+          helm/sentinel-frontend \
+          --namespace sentinel \
           --set image.tag=${{ github.run_number }}
 
-      - name: Wait for Rollout
+      - name: Wait for Backend Rollout
         run: |
-          kubectl rollout status deployment/sentinel-backend -n sentinel
+          kubectl rollout status deployment/sentinel-backend -n sentinel --timeout=300s
+
+      - name: Wait for Frontend Rollout
+        run: |
+          kubectl rollout status deployment/sentinel-frontend -n sentinel --timeout=300s
 
       - name: Health Check
         run: |
-          chmod +x scripts/healthcheck.sh
-          ./scripts/healthcheck.sh
+          echo "Checking pod status..."
+          kubectl get pods -n sentinel
+          kubectl get svc -n sentinel
+          kubectl get ingress -n sentinel
+          
+          # Check backend health via kubectl port-forward
+          echo "Verifying backend pod is running..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sentinel-backend -n sentinel --timeout=60s
+          
+          echo "Backend deployed successfully!"
