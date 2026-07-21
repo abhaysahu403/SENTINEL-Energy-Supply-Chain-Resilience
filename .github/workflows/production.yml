@@ -56,7 +56,7 @@ jobs:
           -t $REGISTRY/sentinel-backend:${{ github.run_number }} \
           -t $REGISTRY/sentinel-backend:latest \
           -f backend/Dockerfile \
-          ./backend
+          .
 
       - name: Build Frontend Image
         run: |

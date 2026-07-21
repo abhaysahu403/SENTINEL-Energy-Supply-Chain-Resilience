@@ -52,7 +52,7 @@ jobs:
           docker build \
           -t $REGISTRY/sentinel-backend:${{ github.run_number }} \
           -f backend/Dockerfile \
-          ./backend
+          .
 
       - name: Build Frontend Image
         run: |

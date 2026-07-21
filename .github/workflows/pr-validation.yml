@@ -43,7 +43,7 @@ jobs:
           docker build \
           -t sentinel-backend:pr-${{ github.run_number }} \
           -f backend/Dockerfile \
-          ./backend
+          .
 
       - name: Build Frontend Docker Image
         run: |
