@@ -1,0 +1,71 @@
+# Production Environment Values for SENTINEL Frontend
+
+replicaCount: 3
+
+image:
+  repository: acrsentineldev2026.azurecr.io/sentinel-frontend
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"  # Use specific version tags in production
+
+imagePullSecrets:
+  - name: acr-secret
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "200"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.sentinel.example.com;" always;
+  hosts:
+    - host: sentinel.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: sentinel-frontend-prod-tls
+      hosts:
+        - sentinel.example.com
+
+config:
+  apiBaseUrl: "https://api.sentinel.example.com"
+  backendServiceUrl: "http://sentinel-backend:8000"
+
+networkPolicy:
+  enabled: true
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - sentinel-frontend
+        topologyKey: kubernetes.io/hostname
+
+nodeSelector:
+  agentpool: production  # Deploy to production node pool

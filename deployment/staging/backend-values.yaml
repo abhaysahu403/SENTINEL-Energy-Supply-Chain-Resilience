@@ -1,0 +1,37 @@
+replicaCount: 2
+
+image:
+  repository: acrsentineldev2026.azurecr.io/sentinel-backend
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+
+ingress:
+  enabled: true
+  host: api-stage.sentinel.local
+
+env:
+  ENVIRONMENT: staging
+  LOG_LEVEL: info
+
+readinessProbe:
+  enabled: true
+
+livenessProbe:
+  enabled: true

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: sentinel-frontend
+description: SENTINEL Frontend - Energy Supply Chain Resilience Platform UI
+type: application
+version: 0.1.0
+appVersion: "v1"
+keywords:
+  - sentinel
+  - supply-chain
+  - frontend
+  - react
+  - vite
+  - energy
+maintainers:
+  - name: Abhay Sahu
+    email: abhay@sentinel.io
+home: https://github.com/abhaysahu/sentinel
+sources:
+  - https://github.com/abhaysahu/sentinel

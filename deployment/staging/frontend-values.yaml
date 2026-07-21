@@ -1,0 +1,30 @@
+replicaCount: 2
+
+image:
+  repository: acrsentineldev2026.azurecr.io/sentinel-frontend
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+
+ingress:
+  enabled: true
+  host: stage.sentinel.local
+
+env:
+  VITE_ENV: staging

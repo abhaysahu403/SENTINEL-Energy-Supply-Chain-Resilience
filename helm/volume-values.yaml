@@ -1,0 +1,6 @@
+﻿volumes:
+  - name: sqlite-storage
+    emptyDir: {}
+volumeMounts:
+  - name: sqlite-storage
+    mountPath: /dbdata

@@ -1,0 +1,28 @@
+name: Trivy Security Scan
+
+description: Scan Docker image for vulnerabilities
+
+inputs:
+
+  image:
+    required: true
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - shell: bash
+      run: |
+
+        echo "Starting Trivy Scan..."
+
+        docker run --rm \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest image \
+          --severity HIGH,CRITICAL \
+          --exit-code 0 \
+          ${{ inputs.image }}
+
+        echo "Scan Completed"

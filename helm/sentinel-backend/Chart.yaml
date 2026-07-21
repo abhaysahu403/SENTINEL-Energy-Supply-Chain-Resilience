@@ -1,0 +1,19 @@
+apiVersion: v2
+name: sentinel-backend
+description: SENTINEL Backend - Energy Supply Chain Resilience Platform API
+type: application
+version: 0.1.0
+appVersion: "v1"
+keywords:
+  - sentinel
+  - supply-chain
+  - risk-management
+  - energy
+  - fastapi
+  - python
+maintainers:
+  - name: Abhay Sahu
+    email: abhay@sentinel.io
+home: https://github.com/abhaysahu/sentinel
+sources:
+  - https://github.com/abhaysahu/sentinel
