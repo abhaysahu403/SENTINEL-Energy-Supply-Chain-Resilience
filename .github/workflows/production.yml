@@ -1,9 +1,10 @@
 name: Production Deployment
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:  # Manual trigger only
+  # push:
+  #   branches:
+  #     - main  # Disabled: Deploy manually or via Jenkins
 
 env:
   REGISTRY: acrsentineldev2026.azurecr.io

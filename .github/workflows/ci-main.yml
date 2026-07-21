@@ -1,0 +1,67 @@
+name: CI - Main Branch
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: acrsentineldev2026.azurecr.io
+
+jobs:
+
+  validate-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 backend/app
+
+      - name: Run Unit Tests
+        run: |
+          cd backend
+          pytest
+
+      - name: Build Backend Docker Image
+        run: |
+          docker build \
+          -t $REGISTRY/sentinel-backend:${{ github.sha }} \
+          -t $REGISTRY/sentinel-backend:latest \
+          -f backend/Dockerfile \
+          .
+
+      - name: Build Frontend Docker Image
+        run: |
+          docker build \
+          -t $REGISTRY/sentinel-frontend:${{ github.sha }} \
+          -t $REGISTRY/sentinel-frontend:latest \
+          -f frontend/Dockerfile \
+          ./frontend
+
+      - name: CI Summary
+        run: |
+          echo "✅ All CI checks passed!"
+          echo "📦 Images built successfully:"
+          echo "  - sentinel-backend:${{ github.sha }}"
+          echo "  - sentinel-frontend:${{ github.sha }}"
+          echo ""
+          echo "🚀 Deployment:"
+          echo "  - Use 'Production Deployment' workflow manually, or"
+          echo "  - Deploy via Jenkins pipeline"
