@@ -1,0 +1,35 @@
+replicaCount: 1
+
+image:
+  repository: acrsentineldev2026.azurecr.io/sentinel-backend
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+autoscaling:
+  enabled: false
+
+ingress:
+  enabled: true
+  host: api-dev.sentinel.local
+
+env:
+  ENVIRONMENT: development
+  LOG_LEVEL: debug
+
+readinessProbe:
+  enabled: true
+
+livenessProbe:
+  enabled: true

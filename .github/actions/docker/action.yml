@@ -1,0 +1,23 @@
+name: Docker Login
+
+description: Login to Azure Container Registry
+
+inputs:
+
+  registry:
+    required: true
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - shell: bash
+      run: |
+
+        echo "Logging into Azure Container Registry..."
+
+        az acr login --name ${{ inputs.registry }}
+
+        echo "Login Successful"

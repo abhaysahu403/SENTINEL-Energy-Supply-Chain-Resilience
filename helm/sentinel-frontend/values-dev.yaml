@@ -1,0 +1,43 @@
+# Development Environment Values for SENTINEL Frontend
+
+replicaCount: 1
+
+image:
+  repository: acrsentineldev2026.azurecr.io/sentinel-frontend
+  pullPolicy: Always
+  tag: "dev-latest"
+
+imagePullSecrets:
+  - name: acr-secret
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+autoscaling:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"  # Allow HTTP in dev
+  hosts:
+    - host: sentinel-dev.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []  # No TLS in dev
+
+config:
+  apiBaseUrl: "http://api.sentinel-dev.local"
+  backendServiceUrl: "http://sentinel-backend:8000"
+
+networkPolicy:
+  enabled: false  # Disabled for easier dev testing
+
+affinity: {}  # No affinity rules in dev

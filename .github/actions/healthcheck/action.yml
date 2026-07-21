@@ -1,0 +1,41 @@
+name: Health Check
+
+description: Verify Kubernetes deployment
+
+inputs:
+
+  deployment:
+    required: true
+
+  namespace:
+    required: true
+
+  health-url:
+    required: true
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - shell: bash
+      run: |
+
+        echo "Waiting for rollout..."
+
+        kubectl rollout status deployment/${{ inputs.deployment }} \
+        -n ${{ inputs.namespace }} \
+        --timeout=300s
+
+        echo "Deployment Successful"
+
+        echo "Checking Application Health..."
+
+        curl \
+        --retry 10 \
+        --retry-delay 10 \
+        --fail \
+        ${{ inputs.health-url }}
+
+        echo "Health Check Passed"

@@ -1,0 +1,167 @@
+pipeline {
+
+    agent any
+
+    options{
+        timestamps()
+        ansiColor('xterm')
+    }
+
+    environment{
+
+        ACR_NAME="acrsentineldev2026.azurecr.io"
+        IMAGE_NAME="sentinel-backend"
+        IMAGE_TAG="${BUILD_NUMBER}"
+
+        HELM_RELEASE="sentinel-backend"
+        HELM_CHART="helm/sentinel-backend"
+
+        NAMESPACE="sentinel"
+
+    }
+
+    stages{
+
+        stage('Manual Approval'){
+
+            steps{
+
+                timeout(time:30, unit:'MINUTES'){
+
+                    input message: "Deploy to Production?"
+
+                }
+
+            }
+
+        }
+
+        stage('Checkout'){
+
+            steps{
+
+                checkout scm
+
+            }
+
+        }
+
+        stage('Build'){
+
+            steps{
+
+                script{
+
+                    build("${ACR_NAME}/${IMAGE_NAME}",IMAGE_TAG)
+
+                }
+
+            }
+
+        }
+
+        stage('Push'){
+
+            steps{
+
+                sh """
+
+                az acr login --name acrsentineldev2026
+
+                docker push ${ACR_NAME}/${IMAGE_NAME}:${IMAGE_TAG}
+
+                """
+
+            }
+
+        }
+
+        stage('Rolling Deployment'){
+
+            steps{
+
+                script{
+
+                    deploy(
+                        HELM_RELEASE,
+                        HELM_CHART,
+                        IMAGE_TAG,
+                        NAMESPACE
+                    )
+
+                }
+
+            }
+
+        }
+
+        stage('Wait For Rollout'){
+
+            steps{
+
+                sh """
+
+                kubectl rollout status deployment/${HELM_RELEASE} \
+                -n ${NAMESPACE}
+
+                """
+
+            }
+
+        }
+
+        stage('Health Check'){
+
+            steps{
+
+                sh """
+
+                chmod +x scripts/healthcheck.sh
+
+                ./scripts/healthcheck.sh
+
+                """
+
+            }
+
+        }
+
+    }
+
+    post{
+
+        success{
+
+            script{
+
+                notify("PRODUCTION SUCCESS")
+
+            }
+
+        }
+
+        failure{
+
+            sh """
+
+            kubectl rollout undo deployment/${HELM_RELEASE}
+
+            """
+
+            script{
+
+                notify("ROLLBACK COMPLETED")
+
+            }
+
+        }
+
+        always{
+
+            cleanWs()
+
+        }
+
+    }
+
+}

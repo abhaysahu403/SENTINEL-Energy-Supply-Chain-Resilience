@@ -1,0 +1,77 @@
+# Production Environment Values for SENTINEL Backend
+
+replicaCount: 3
+
+image:
+  repository: acrsentineldev2026.azurecr.io/sentinel-backend
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"  # Use specific version tags in production
+
+imagePullSecrets:
+  - name: acr-secret
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+  hosts:
+    - host: api.sentinel.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: sentinel-backend-prod-tls
+      hosts:
+        - api.sentinel.example.com
+
+config:
+  appEnv: "production"
+  logLevel: "WARNING"
+  autoplay: "0"  # Disable autoplay in production
+  simulatorInterval: "60"
+  corsOrigins: "https://sentinel.example.com"
+
+secrets:
+  jwtSecret: ""  # MUST be provided via --set or existingSecret
+  # REQUIRED: --set secrets.jwtSecret="your-secure-production-secret"
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - sentinel-backend
+        topologyKey: kubernetes.io/hostname
+
+nodeSelector:
+  agentpool: production  # Deploy to production node pool

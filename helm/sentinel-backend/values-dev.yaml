@@ -1,0 +1,53 @@
+# Development Environment Values for SENTINEL Backend
+
+replicaCount: 1
+
+image:
+  repository: acrsentineldev2026.azurecr.io/sentinel-backend
+  pullPolicy: Always
+  tag: "dev-latest"
+
+imagePullSecrets:
+  - name: acr-secret
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"  # Allow HTTP in dev
+  hosts:
+    - host: api.sentinel-dev.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []  # No TLS in dev
+
+config:
+  appEnv: "development"
+  logLevel: "DEBUG"
+  autoplay: "1"  # Enable autoplay for demo
+  simulatorInterval: "15"  # Faster events in dev
+  corsOrigins: "http://localhost:5173,http://localhost:3000,http://sentinel-dev.local"
+
+secrets:
+  jwtSecret: "dev-jwt-secret-change-in-production"
+  # Override with: --set secrets.jwtSecret="your-secret"
+
+networkPolicy:
+  enabled: false  # Disabled for easier dev testing
+
+podDisruptionBudget:
+  enabled: false
+
+affinity: {}  # No affinity rules in dev

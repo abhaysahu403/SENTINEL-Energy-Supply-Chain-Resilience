@@ -1,0 +1,79 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    triggers {
+        githubPullRequest()
+    }
+
+    environment {
+        IMAGE_NAME = "sentinel-backend"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                cd backend
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                sh '''
+                cd backend
+                flake8 app
+                '''
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh '''
+                cd backend
+                pytest
+                '''
+            }
+        }
+
+        stage('Docker Build Test') {
+            steps {
+                sh '''
+                docker build -t ${IMAGE_NAME}:pr-${BUILD_NUMBER} .
+                '''
+            }
+        }
+
+    }
+
+    post {
+
+        success {
+            echo "PR Validation Passed"
+        }
+
+        failure {
+            echo "PR Validation Failed"
+        }
+
+        always {
+            cleanWs()
+        }
+
+    }
+}

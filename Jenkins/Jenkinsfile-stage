@@ -1,0 +1,109 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+    }
+
+    environment {
+        ACR_NAME="acrsentineldev2026.azurecr.io"
+        IMAGE_NAME="sentinel-backend"
+        IMAGE_TAG="${BUILD_NUMBER}"
+
+        HELM_RELEASE="sentinel-backend"
+        HELM_CHART="helm/sentinel-backend"
+
+        NAMESPACE="sentinel"
+    }
+
+    stages {
+
+        stage('Checkout'){
+            steps{
+                checkout scm
+            }
+        }
+
+        stage('Run Tests'){
+            steps{
+                script{
+                    test()
+                }
+            }
+        }
+
+        stage('Build Image'){
+            steps{
+                script{
+                    build("${ACR_NAME}/${IMAGE_NAME}",IMAGE_TAG)
+                }
+            }
+        }
+
+        stage('Security Scan'){
+            steps{
+                script{
+                    scan("${ACR_NAME}/${IMAGE_NAME}:${IMAGE_TAG}")
+                }
+            }
+        }
+
+        stage('Push Image'){
+            steps{
+                sh """
+                az acr login --name acrsentineldev2026
+
+                docker push ${ACR_NAME}/${IMAGE_NAME}:${IMAGE_TAG}
+                """
+            }
+        }
+
+        stage('Deploy Staging'){
+            steps{
+                script{
+                    deploy(
+                        HELM_RELEASE,
+                        HELM_CHART,
+                        IMAGE_TAG,
+                        NAMESPACE
+                    )
+                }
+            }
+        }
+
+        stage('Smoke Test'){
+            steps{
+                sh """
+                kubectl rollout status deployment/${HELM_RELEASE} -n ${NAMESPACE}
+
+                curl http://4.188.115.109/health
+                """
+            }
+        }
+
+    }
+
+    post{
+
+        success{
+            script{
+                notify("STAGING SUCCESS")
+            }
+        }
+
+        failure{
+
+            sh """
+            kubectl rollout undo deployment/${HELM_RELEASE} -n ${NAMESPACE}
+            """
+
+            script{
+                notify("STAGING FAILED")
+            }
+
+        }
+
+    }
+
+}

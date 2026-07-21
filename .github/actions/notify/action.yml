@@ -1,0 +1,44 @@
+name: Deployment Notification
+
+description: Print deployment summary
+
+inputs:
+
+  status:
+    required: true
+
+  environment:
+    required: true
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - shell: bash
+      run: |
+
+        echo "======================================"
+
+        echo "Deployment Summary"
+
+        echo "======================================"
+
+        echo "Status      : ${{ inputs.status }}"
+
+        echo "Environment : ${{ inputs.environment }}"
+
+        echo "Repository  : $GITHUB_REPOSITORY"
+
+        echo "Branch      : $GITHUB_REF_NAME"
+
+        echo "Commit      : $GITHUB_SHA"
+
+        echo "Run Number  : $GITHUB_RUN_NUMBER"
+
+        echo "Actor       : $GITHUB_ACTOR"
+
+        echo "Workflow    : $GITHUB_WORKFLOW"
+
+        echo "======================================"

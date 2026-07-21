@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sentinel-backend.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sentinel-backend.labels" . | nindent 4 }}
+data:
+  # Application Settings
+  app-env: {{ .Values.config.appEnv | quote }}
+  log-level: {{ .Values.config.logLevel | quote }}
+  sentinel-autoplay: {{ .Values.config.autoplay | quote }}
+  sentinel-sim-interval: {{ .Values.config.simulatorInterval | quote }}
+  python-unbuffered: {{ .Values.config.pythonUnbuffered | quote }}
+  database-url: "sqlite:////dbdata/sentinel.db"

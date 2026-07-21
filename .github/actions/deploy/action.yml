@@ -1,0 +1,44 @@
+name: Deploy to Kubernetes
+
+description: Deploy application using Helm
+
+inputs:
+
+  release:
+
+    required: true
+
+  chart:
+
+    required: true
+
+  namespace:
+
+    required: true
+
+  imageTag:
+
+    required: true
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - shell: bash
+
+      run: |
+
+        echo "Deploying Application"
+
+        helm upgrade --install \
+          ${{ inputs.release }} \
+          ${{ inputs.chart }} \
+          --namespace ${{ inputs.namespace }} \
+          --create-namespace \
+          --reuse-values \
+          --set image.tag=${{ inputs.imageTag }}
+
+        kubectl rollout status deployment/${{ inputs.release }} \
+          -n ${{ inputs.namespace }}

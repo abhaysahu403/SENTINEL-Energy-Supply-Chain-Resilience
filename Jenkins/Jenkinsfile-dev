@@ -1,0 +1,130 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    environment {
+        ACR_NAME = "acrsentineldev2026.azurecr.io"
+        IMAGE_NAME = "sentinel-backend"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        AKS_NAMESPACE = "sentinel"
+        HELM_RELEASE = "sentinel-backend"
+        HELM_CHART = "helm/sentinel-backend"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                script {
+                    test()
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    build(
+                        "${ACR_NAME}/${IMAGE_NAME}",
+                        "${IMAGE_TAG}"
+                    )
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                script {
+                    scan(
+                        "${ACR_NAME}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    )
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh """
+                az acr login --name acrsentineldev2026
+
+                docker push ${ACR_NAME}/${IMAGE_NAME}:${IMAGE_TAG}
+                """
+            }
+        }
+
+        stage('Deploy to AKS') {
+            steps {
+                script {
+                    deploy(
+                        HELM_RELEASE,
+                        HELM_CHART,
+                        IMAGE_TAG,
+                        AKS_NAMESPACE
+                    )
+                }
+            }
+        }
+
+        stage('Verify Rollout') {
+            steps {
+                sh """
+                kubectl rollout status deployment/${HELM_RELEASE} \
+                -n ${AKS_NAMESPACE} \
+                --timeout=300s
+                """
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh """
+                chmod +x scripts/healthcheck.sh
+
+                ./scripts/healthcheck.sh
+                """
+            }
+        }
+
+    }
+
+    post {
+
+        success {
+
+            script {
+                notify("SUCCESS")
+            }
+
+        }
+
+        failure {
+
+            sh """
+            kubectl rollout undo deployment/${HELM_RELEASE} \
+            -n ${AKS_NAMESPACE}
+            """
+
+            script {
+                notify("FAILED")
+            }
+
+        }
+
+        always {
+            cleanWs()
+        }
+
+    }
+
+}
