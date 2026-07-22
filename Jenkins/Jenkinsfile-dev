@@ -1,3 +1,5 @@
+@Library('sentinel-library') _
+
 pipeline {
     agent any
 
