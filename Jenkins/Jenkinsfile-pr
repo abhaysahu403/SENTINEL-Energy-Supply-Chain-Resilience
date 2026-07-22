@@ -9,10 +9,6 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '20'))
     }
 
-    triggers {
-        githubPullRequest()
-    }
-
     environment {
         IMAGE_NAME = "sentinel-backend"
     }
@@ -38,8 +34,8 @@ pipeline {
         stage('Lint') {
             steps {
                 sh '''
-                cd backend
-                flake8 app
+                pip install flake8
+                flake8 backend/app
                 '''
             }
         }
@@ -53,10 +49,18 @@ pipeline {
             }
         }
 
-        stage('Docker Build Test') {
+        stage('Docker Build Backend') {
             steps {
                 sh '''
-                docker build -t ${IMAGE_NAME}:pr-${BUILD_NUMBER} .
+                docker build -t ${IMAGE_NAME}:pr-${BUILD_NUMBER} -f backend/Dockerfile .
+                '''
+            }
+        }
+
+        stage('Docker Build Frontend') {
+            steps {
+                sh '''
+                docker build -t sentinel-frontend:pr-${BUILD_NUMBER} -f frontend/Dockerfile ./frontend
                 '''
             }
         }
