@@ -2,11 +2,6 @@
 
 pipeline {
     agent any
-    
-    tools {
-        // Use Python 3 - configure this in Jenkins Global Tool Configuration
-        // Or we'll use direct commands
-    }
 
     options {
         timestamps()
@@ -16,7 +11,6 @@ pipeline {
 
     environment {
         IMAGE_NAME = "sentinel-backend"
-        PYTHON_CMD = 'python3'  // Change to 'python' if that's what's available
     }
 
     stages {
