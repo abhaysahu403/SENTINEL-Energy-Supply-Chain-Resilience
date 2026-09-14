@@ -14,6 +14,7 @@ COPY data /data
 
 ENV SENTINEL_DATABASE_URL=sqlite:////app/sentinel.db
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
