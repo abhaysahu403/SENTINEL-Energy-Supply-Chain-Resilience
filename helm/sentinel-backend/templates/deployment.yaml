@@ -49,6 +49,8 @@ spec:
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
           env:
+            - name: PYTHONPATH
+              value: "/app"
             - name: SENTINEL_AUTOPLAY
               valueFrom:
                 configMapKeyRef:
