@@ -5,7 +5,7 @@ replicaCount: 1
 image:
   repository: abhaysahu403/sentinel-backend
   pullPolicy: Always
-  tag: "latest"
+  tag: "v1.0.1"
 
 imagePullSecrets: []  # Public Docker Hub - no secrets needed
 
