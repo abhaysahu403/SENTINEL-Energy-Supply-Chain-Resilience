@@ -3,12 +3,11 @@
 replicaCount: 3
 
 image:
-  repository: acrsentineldev2026.azurecr.io/sentinel-frontend
+  repository: abhaysahu403/sentinel-frontend
   pullPolicy: IfNotPresent
-  tag: "v1.0.0"  # Use specific version tags in production
+  tag: "latest"  # Will be updated by ArgoCD with commit SHA
 
-imagePullSecrets:
-  - name: acr-secret
+imagePullSecrets: []  # Public Docker Hub - no secrets needed
 
 resources:
   limits:

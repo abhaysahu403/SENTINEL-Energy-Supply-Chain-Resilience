@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sentinel-backend-prod
+  namespace: argocd
+  labels:
+    app: sentinel
+    component: backend
+    environment: prod
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/abhaysahu403/SENTINEL-Energy-Supply-Chain-Resilience.git
+    targetRevision: main  # Use 'production' branch or tags in real production
+    path: helm/sentinel-backend
+    helm:
+      valueFiles:
+        - values-prod.yaml
+      # Override sensitive values
+      parameters:
+        - name: secrets.jwtSecret
+          value: ""  # Set via ArgoCD UI or sealed-secrets
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sentinel-prod
+  
+  syncPolicy:
+    # Manual sync for production (safer)
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Require manual approval for production
+  # syncPolicy:
+  #   automated:
+  #     prune: false
+  #     selfHeal: false

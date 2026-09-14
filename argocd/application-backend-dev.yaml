@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sentinel-backend-dev
+  namespace: argocd
+  labels:
+    app: sentinel
+    component: backend
+    environment: dev
+spec:
+  # Project to which this application belongs
+  project: default
+  
+  # Source: Where to get the manifests
+  source:
+    repoURL: https://github.com/abhaysahu403/SENTINEL-Energy-Supply-Chain-Resilience.git
+    targetRevision: main  # Can be branch, tag, or commit SHA
+    path: helm/sentinel-backend
+    helm:
+      valueFiles:
+        - values-dev.yaml
+      # You can override values here
+      # parameters:
+      #   - name: image.tag
+      #     value: "main-abc123"
+  
+  # Destination: Where to deploy
+  destination:
+    server: https://kubernetes.default.svc  # In-cluster
+    namespace: sentinel-dev
+  
+  # Sync Policy: How to deploy
+  syncPolicy:
+    automated:
+      prune: true      # Delete resources when removed from Git
+      selfHeal: true   # Auto-sync when cluster state differs from Git
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true  # Auto-create namespace if missing
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Ignore differences (optional)
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # Ignore replica count if using HPA

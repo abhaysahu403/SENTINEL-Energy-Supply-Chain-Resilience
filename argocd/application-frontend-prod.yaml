@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sentinel-frontend-prod
+  namespace: argocd
+  labels:
+    app: sentinel
+    component: frontend
+    environment: prod
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/abhaysahu403/SENTINEL-Energy-Supply-Chain-Resilience.git
+    targetRevision: main
+    path: helm/sentinel-frontend
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sentinel-prod
+  
+  syncPolicy:
+    # Manual sync for production
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
