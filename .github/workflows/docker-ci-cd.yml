@@ -1,0 +1,224 @@
+name: Docker CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  DOCKER_REGISTRY: docker.io
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+
+  # Job 1: Validate Code Quality
+  validate:
+    name: Code Quality & Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest
+
+      - name: Lint with flake8
+        run: |
+          flake8 backend/app
+
+      - name: Run Unit Tests
+        run: |
+          cd backend
+          pytest -v
+
+  # Job 2: Build Docker Images
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          tags: sentinel-backend:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: frontend/Dockerfile
+          push: false
+          tags: sentinel-frontend:${{ env.IMAGE_TAG }}
+          build-args: |
+            VITE_API_BASE=http://localhost:8000
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 3: Integration Test with Docker Compose
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          echo "JWT_SECRET=test-secret-for-ci" > .env
+
+      - name: Start Services with Docker Compose
+        run: |
+          docker-compose up -d --build
+          echo "Waiting for services to be healthy..."
+          sleep 30
+
+      - name: Check Backend Health
+        run: |
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8000/health
+          echo "✅ Backend is healthy"
+
+      - name: Check Frontend
+        run: |
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:5173
+          echo "✅ Frontend is serving"
+
+      - name: Run API Tests
+        run: |
+          # Test key endpoints
+          curl -f http://localhost:8000/health || exit 1
+          curl -f http://localhost:8000/docs || exit 1
+          echo "✅ All endpoints responding"
+
+      - name: Show Logs on Failure
+        if: failure()
+        run: |
+          docker-compose logs backend
+          docker-compose logs frontend
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose down -v
+
+  # Job 4: Push to Docker Hub (only on main/develop)
+  push:
+    name: Push to Docker Hub
+    runs-on: ubuntu-latest
+    needs: integration-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Docker metadata for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/sentinel-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Docker metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/sentinel-frontend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          build-args: |
+            VITE_API_BASE=http://localhost:8000
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 5: Create Release Summary
+  summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [validate, build, integration-test]
+    if: always()
+    
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🚀 CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Pipeline Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Quality: ${{ needs.validate.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Build: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests: ${{ needs.integration-test.result }}" >> $GITHUB_STEP_SUMMARY

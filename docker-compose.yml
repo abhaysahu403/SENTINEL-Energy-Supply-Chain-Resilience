@@ -1,0 +1,76 @@
+version: "3.9"
+
+# SENTINEL - Complete Local Development Stack
+# This runs the full application with all services locally
+# Usage: docker-compose up --build
+
+services:
+
+  # Backend API (FastAPI + SQLite)
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sentinel-backend
+    environment:
+      # Application Settings
+      SENTINEL_APP_ENV: development
+      SENTINEL_LOG_LEVEL: INFO
+      SENTINEL_AUTOPLAY: "1"
+      SENTINEL_SIMULATOR_INTERVAL: "30"
+      
+      # Database (SQLite)
+      SENTINEL_DATABASE_URL: sqlite:////app/sentinel.db
+      
+      # Security
+      SENTINEL_JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      
+      # CORS
+      SENTINEL_CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+      
+      # Python
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend-data:/app
+      - ./data:/data:ro  # Mount data directory as read-only
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+  # Frontend (React + Vite + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: http://localhost:8000
+    container_name: sentinel-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+volumes:
+  backend-data:
+    driver: local
+
+networks:
+  sentinel-network:
+    driver: bridge
